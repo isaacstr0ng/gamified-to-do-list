@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Quest Log</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --accent: #7c3aed;
+  --accent2: #06b6d4;
+  --gold: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #2d3748;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.header-left h1 { font-size: 18px; font-weight: 700; letter-spacing: 1px; color: #fff; }
+.header-left span { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+.player-card {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
+  border-radius: 10px; padding: 8px 12px;
+}
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.player-info { min-width: 100px; }
+.player-name { font-size: 12px; font-weight: 600; color: #fff; }
+.level-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--gold); font-weight: 600; margin-bottom: 3px; }
+.xp-bar-bg { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.xp-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s ease; }
+.xp-label { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+.icon-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted); font-size: 16px;
+  padding: 6px 10px; cursor: pointer; transition: all 0.2s;
+}
+.icon-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* ── Sync status ── */
+.sync-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 5px 16px; font-size: 11px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.sync-dot.ok { background: var(--green); }
+.sync-dot.err { background: var(--red); }
+.sync-dot.busy { background: var(--gold); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Stats row ── */
+.stats-row {
+  display: flex; gap: 8px; padding: 10px 16px;
+  overflow-x: auto; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.stat-card { flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 76px; }
+.stat-value { font-size: 20px; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 9px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+.stat-streak .stat-value { color: var(--gold); }
+.stat-done .stat-value { color: var(--green); }
+.stat-xp .stat-value { color: var(--accent2); }
+.stat-level .stat-value { color: var(--accent); }
+
+/* ── Daily goal ── */
+.daily-section {
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.daily-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.goal-bar-wrap { flex: 1; min-width: 100px; }
+.goal-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.goal-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green), #34d399); transition: width 0.5s ease; }
+.goal-text { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.goal-input-wrap { display: flex; align-items: center; gap: 6px; }
+.goal-input { width: 44px; padding: 4px 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 11px; text-align: center; }
+.goal-input:focus { outline: none; border-color: var(--accent); }
+.goal-btn { padding: 4px 10px; background: var(--accent); border: none; border-radius: 6px; color: #fff; font-size: 11px; cursor: pointer; }
+
+/* ── Chart section ── */
+.chart-section {
+  padding: 16px; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+.chart-range { display: flex; gap: 4px; }
+.range-btn { padding: 3px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--muted); font-size: 10px; cursor: pointer; }
+.range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chart-container { position: relative; height: 160px; }
+
+/* ── Main layout ── */
+.main { display: grid; grid-template-columns: 1fr 260px; }
+@media (max-width: 700px) { .main { grid-template-columns: 1fr; } .sidebar { border-top: 1px solid var(--border); } }
+
+/* ── Tasks panel ── */
+.tasks-panel { padding: 14px 16px; border-right: 1px solid var(--border); }
+.panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; }
+.add-form { display: flex; gap: 7px; margin-bottom: 12px; flex-wrap: wrap; }
+.task-input { flex: 1; min-width: 120px; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; }
+.task-input:focus { outline: none; border-color: var(--accent); }
+.task-input::placeholder { color: var(--muted); }
+.diff-select { padding: 9px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 11px; cursor: pointer; }
+.diff-select:focus { outline: none; border-color: var(--accent); }
+.add-btn { padding: 9px 14px; background: linear-gradient(135deg, var(--accent), #9333ea); border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.add-btn:hover { opacity: 0.9; }
+.add-btn:active { transform: scale(0.98); }
+
+.filters { display: flex; gap: 6px; margin-bottom: 12px; }
+.filter-btn { padding: 4px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--muted); font-size: 11px; cursor: pointer; }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.task-list { display: flex; flex-direction: column; gap: 7px; }
+.task-item { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; transition: border-color 0.2s; animation: slideIn 0.2s ease; }
+.task-item:hover { border-color: rgba(124,58,237,0.4); }
+.task-item.done { opacity: 0.5; }
+.task-item.done .task-text { text-decoration: line-through; color: var(--muted); }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.check-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); background: transparent; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: all 0.2s; }
+.check-btn:hover { border-color: var(--green); background: rgba(16,185,129,0.1); }
+.task-item.done .check-btn { background: var(--green); border-color: var(--green); color: #fff; }
+
+.task-content { flex: 1; min-width: 0; }
+.task-text { font-size: 13px; line-height: 1.4; word-break: break-word; }
+.task-meta { display: flex; gap: 6px; margin-top: 2px; align-items: center; flex-wrap: wrap; }
+.diff-badge { font-size: 9px; padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+.diff-easy { background: rgba(16,185,129,0.15); color: var(--green); }
+.diff-medium { background: rgba(245,158,11,0.15); color: var(--gold); }
+.diff-hard { background: rgba(239,68,68,0.15); color: var(--red); }
+.diff-epic { background: rgba(124,58,237,0.2); color: #a78bfa; }
+.xp-reward { font-size: 9px; color: var(--accent2); }
+.task-time { font-size: 9px; color: var(--muted); }
+
+.delete-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0; transition: opacity 0.2s, color 0.2s; flex-shrink: 0; }
+.task-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { color: var(--red); }
+
+.empty-state { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 12px; }
+.empty-state .icon { font-size: 28px; margin-bottom: 6px; }
+
+/* ── Sidebar ── */
+.sidebar { padding: 14px; background: var(--surface); }
+.section { margin-bottom: 18px; }
+.achievement-grid { display: flex; flex-direction: column; gap: 7px; }
+.achievement { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.achievement.unlocked { border-color: rgba(245,158,11,0.4); }
+.achievement.locked { opacity: 0.4; }
+.ach-icon { font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.achievement.locked .ach-icon { filter: grayscale(1); }
+.ach-info { min-width: 0; }
+.ach-name { font-size: 11px; font-weight: 600; line-height: 1.2; }
+.achievement.unlocked .ach-name { color: var(--gold); }
+.ach-desc { font-size: 9px; color: var(--muted); margin-top: 1px; }
+.ach-status { font-size: 9px; margin-top: 2px; font-weight: 600; }
+.achievement.unlocked .ach-status { color: var(--green); }
+.achievement.locked .ach-status { color: var(--muted); }
+
+/* ── Settings Modal ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 3000; align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 420px; }
+.modal h2 { font-size: 16px; margin-bottom: 4px; }
+.modal p { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; letter-spacing: 0.5px; }
+.field input { width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 12px; font-family: monospace; }
+.field input:focus { outline: none; border-color: var(--accent); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.btn-cancel { padding: 8px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.btn-save { padding: 8px 16px; background: var(--accent); border: none; border-radius: 8px; color: #fff; font-size: 12px; cursor: pointer; font-weight: 600; }
+.modal-note { font-size: 10px; color: var(--muted); margin-top: 10px; padding: 8px; background: var(--surface2); border-radius: 6px; line-height: 1.5; }
+
+/* ── Toast ── */
+.toast-container { position: fixed; bottom: 20px; right: 16px; display: flex; flex-direction: column; gap: 7px; z-index: 4000; pointer-events: none; }
+.toast { background: var(--surface); border: 1px solid var(--gold); border-radius: 10px; padding: 9px 14px; font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 7px; animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards; pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); max-width: 240px; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(16px); } }
+
+/* ── Level up ── */
+.levelup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 5000; align-items: center; justify-content: center; }
+.levelup-overlay.show { display: flex; }
+.levelup-card { background: var(--surface); border: 2px solid var(--gold); border-radius: 20px; padding: 28px 36px; text-align: center; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.levelup-icon { font-size: 48px; margin-bottom: 10px; }
+.levelup-title { font-size: 11px; color: var(--gold); letter-spacing: 3px; text-transform: uppercase; }
+.levelup-num { font-size: 48px; font-weight: 800; color: #fff; line-height: 1; }
+.levelup-close { margin-top: 14px; padding: 8px 22px; background: var(--accent); border: none; border-radius: 8px; color: #fff; font-size: 12px; cursor: pointer; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px">⚔️</span>
+      <div><h1>QUEST LOG</h1><span>Gamified To-Do</span></div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="openSettings()" title="Gist Sync Settings">⚙️</button>
+    <button class="icon-btn" onclick="syncNow()" title="Sync now" id="sync-btn">☁️</button>
+    <div class="player-card">
+      <div class="avatar" id="avatar">🧙</div>
+      <div class="player-info">
+        <div class="level-badge">⭐ Level <span id="hdr-level">1</span></div>
+        <div class="player-name">Isaac</div>
+        <div class="xp-bar-bg"><div class="xp-bar-fill" id="hdr-xp-fill" style="width:0%"></div></div>
+        <div class="xp-label"><span id="hdr-xp-cur">0</span> / <span id="hdr-xp-max">100</span> XP</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sync bar -->
+<div class="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-msg">Not connected — click ⚙️ to set up Gist sync</span>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card stat-streak"><div class="stat-value" id="stat-streak">0</div><div class="stat-label">🔥 Streak</div></div>
+  <div class="stat-card stat-done"><div class="stat-value" id="stat-done">0</div><div class="stat-label">✅ Today</div></div>
+  <div class="stat-card stat-xp"><div class="stat-value" id="stat-total-xp">0</div><div class="stat-label">💎 Total XP</div></div>
+  <div class="stat-card stat-level"><div class="stat-value" id="stat-level">1</div><div class="stat-label">⚡ Level</div></div>
+  <div class="stat-card"><div class="stat-value" id="stat-total-tasks" style="color:#e2e8f0">0</div><div class="stat-label">📋 All Time</div></div>
+</div>
+
+<!-- Daily goal -->
+<div class="daily-section">
+  <div class="daily-label">🎯 Daily Goal</div>
+  <div class="goal-bar-wrap">
+    <div class="goal-bar-bg"><div class="goal-bar-fill" id="goal-fill" style="width:0%"></div></div>
+    <div class="goal-text"><span id="goal-cur">0</span> / <span id="goal-max">5</span> tasks today</div>
+  </div>
+  <div class="goal-input-wrap">
+    <input type="number" class="goal-input" id="goal-input" value="5" min="1" max="50">
+    <button class="goal-btn" onclick="setGoal()">Set</button>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="chart-section">
+  <div class="chart-header">
+    <div class="section-title">📈 XP Progress</div>
+    <div class="chart-range">
+      <button class="range-btn active" onclick="setRange(7, this)">7d</button>
+      <button class="range-btn" onclick="setRange(14, this)">14d</button>
+      <button class="range-btn" onclick="setRange(30, this)">30d</button>
+    </div>
+  </div>
+  <div class="chart-container">
+    <canvas id="progress-chart"></canvas>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="tasks-panel">
+    <div class="panel-title">⚔️ Active Quests</div>
+    <div class="add-form">
+      <input type="text" class="task-input" id="task-input" placeholder="Add a new quest..." maxlength="120">
+      <select class="diff-select" id="diff-select">
+        <option value="easy">Easy +10</option>
+        <option value="medium" selected>Medium +25</option>
+        <option value="hard">Hard +50</option>
+        <option value="epic">Epic +100</option>
+      </select>
+      <button class="add-btn" onclick="addTask()">+ Add</button>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+      <button class="filter-btn" onclick="setFilter('active', this)">Active</button>
+      <button class="filter-btn" onclick="setFilter('done', this)">Done</button>
+    </div>
+    <div class="task-list" id="task-list"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="section">
+      <div class="section-title" style="margin-bottom:10px">🏆 Achievements</div>
+      <div class="achievement-grid" id="ach-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="toast-container" id="toasts"></div>
+
+<div class="levelup-overlay" id="levelup-overlay">
+  <div class="levelup-card">
+    <div class="levelup-icon">🎉</div>
+    <div class="levelup-title">Level Up!</div>
+    <div class="levelup-num" id="levelup-num">2</div>
+    <button class="levelup-close" onclick="closeLevelUp()">Let's go!</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <h2>⚙️ Gist Sync</h2>
+    <p>Store your data in a private GitHub Gist. Works across all devices — iPhone, desktop, anywhere.</p>
+    <div class="field">
+      <label>GITHUB PERSONAL ACCESS TOKEN</label>
+      <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    </div>
+    <div class="field">
+      <label>GIST ID <span style="color:var(--muted);font-weight:normal">(leave blank to create new)</span></label>
+      <input type="text" id="gh-gist-id" placeholder="auto-created on first save">
+    </div>
+    <div class="modal-note">
+      Get a token at github.com/settings/tokens → Generate new token (classic) → check <strong>gist</strong> scope only. Your token is stored in this browser only and never sent anywhere except GitHub's API.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save &amp; Sync</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────────────────────────
+const XP_TABLE = { easy: 10, medium: 25, hard: 50, epic: 100 };
+const AVATARS = ['🧙','🧙','🛡️','⚔️','🧝','🦸','🌟','👑','🔱','🌠'];
+
+const ACHIEVEMENTS = [
+  { id: 'first_quest', icon: '⚔️', name: 'First Quest',   desc: 'Complete your first task',     check: s => s.totalDone >= 1 },
+  { id: 'on_fire',     icon: '🔥', name: 'On Fire',        desc: '3-day streak',                  check: s => s.streak >= 3 },
+  { id: 'epic_slayer', icon: '🐉', name: 'Epic Slayer',    desc: 'Complete an Epic task',          check: s => s.epicDone >= 1 },
+  { id: 'centurion',   icon: '💯', name: 'Centurion',      desc: '100 total XP',                  check: s => s.totalXP >= 100 },
+  { id: 'level5',      icon: '⭐', name: 'Rising Star',    desc: 'Reach Level 5',                 check: s => s.level >= 5 },
+  { id: 'streak7',     icon: '🌟', name: 'Week Warrior',   desc: '7-day streak',                  check: s => s.streak >= 7 },
+  { id: 'goal_hit',    icon: '🎯', name: 'On Target',      desc: 'Hit your daily goal',           check: s => s.goalHitCount >= 1 },
+  { id: 'prolific',    icon: '📚', name: 'Prolific',       desc: '25 total tasks done',           check: s => s.totalDone >= 25 },
+];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let state = {
+  tasks: [], level: 1, xp: 0, totalXP: 0,
+  streak: 0, lastActiveDate: null,
+  totalDone: 0, epicDone: 0, goalHitCount: 0,
+  dailyGoal: 5, unlockedAchs: [],
+  history: [], // [{ date, xpEarned, tasksDone, cumulativeXP }]
+};
+
+let gistToken = '';
+let gistId = '';
+let chartRange = 7;
+let progressChart = null;
+let currentFilter = 'all';
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function today() { return new Date().toISOString().slice(0, 10); }
+function todayDone() { return state.tasks.filter(t => t.done && t.doneDate === today()).length; }
+
+function saveLocal() {
+  localStorage.setItem('questlog_v3', JSON.stringify(state));
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem('questlog_v3');
+    if (raw) state = { ...state, ...JSON.parse(raw) };
+    // migrate from v2
+    const v2 = localStorage.getItem('questlog_v2');
+    if (v2 && !raw) {
+      const old = JSON.parse(v2);
+      state = { ...state, ...old };
+      saveLocal();
+    }
+  } catch(e) {}
+  gistToken = localStorage.getItem('gist_token') || '';
+  gistId    = localStorage.getItem('gist_id')    || '';
+}
+
+// ─── Gist sync ───────────────────────────────────────────────────────────────
+function setSyncStatus(status, msg) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-msg');
+  dot.className = 'sync-dot ' + (status || '');
+  txt.textContent = msg;
+}
+
+async function gistLoad() {
+  if (!gistToken || !gistId) return false;
+  setSyncStatus('busy', 'Loading from Gist…');
+  try {
+    const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { Authorization: `token ${gistToken}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const content = data.files['questlog.json']?.content;
+    if (content) {
+      const remote = JSON.parse(content);
+      state = { ...state, ...remote };
+      saveLocal();
+    }
+    setSyncStatus('ok', 'Synced from Gist · ' + new Date().toLocaleTimeString());
+    return true;
+  } catch(e) {
+    setSyncStatus('err', 'Sync failed: ' + e.message);
+    return false;
+  }
+}
+
+async function gistSave() {
+  if (!gistToken) { saveLocal(); return; }
+  setSyncStatus('busy', 'Saving to Gist…');
+  saveLocal();
+  const body = {
+    description: 'Quest Log data',
+    public: false,
+    files: { 'questlog.json': { content: JSON.stringify(state, null, 2) } }
+  };
+  try {
+    let r;
+    if (gistId) {
+      r = await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `token ${gistToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      r = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { Authorization: `token ${gistToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
+        body: JSON.stringify(body)
+      });
+      if (r.ok) {
+        const d = await r.json();
+        gistId = d.id;
+        localStorage.setItem('gist_id', gistId);
+        document.getElementById('gh-gist-id').value = gistId;
+      }
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok', 'Saved to Gist · ' + new Date().toLocaleTimeString());
+  } catch(e) {
+    setSyncStatus('err', 'Save failed: ' + e.message);
+  }
+}
+
+async function syncNow() { await gistLoad(); render(); renderChart(); }
+
+// ─── Settings modal ───────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('gh-token').value = gistToken;
+  document.getElementById('gh-gist-id').value = gistId;
+  document.getElementById('settings-modal').classList.add('show');
+}
+function closeSettings() { document.getElementById('settings-modal').classList.remove('show'); }
+
+async function saveSettings() {
+  gistToken = document.getElementById('gh-token').value.trim();
+  gistId    = document.getElementById('gh-gist-id').value.trim();
+  localStorage.setItem('gist_token', gistToken);
+  localStorage.setItem('gist_id', gistId);
+  closeSettings();
+  if (gistToken) {
+    const ok = await gistLoad();
+    if (ok) { render(); renderChart(); toast('☁️ Synced successfully!'); }
+    else { toast('⚠️ Sync failed — check your token', 'err'); }
+  } else {
+    setSyncStatus('', 'Not connected — click ⚙️ to set up Gist sync');
+  }
+}
+
+// ─── Streak ──────────────────────────────────────────────────────────────────
+function checkStreak() {
+  if (!state.lastActiveDate) return;
+  const diff = Math.round((new Date(today()) - new Date(state.lastActiveDate)) / 86400000);
+  if (diff > 1) { state.streak = 0; state.lastActiveDate = null; saveLocal(); }
+}
+
+function markActiveToday() {
+  const t = today();
+  if (state.lastActiveDate === t) return;
+  const last = state.lastActiveDate ? new Date(state.lastActiveDate) : null;
+  const diff = last ? Math.round((new Date(t) - last) / 86400000) : null;
+  state.streak = diff === 1 ? state.streak + 1 : 1;
+  state.lastActiveDate = t;
+}
+
+// ─── XP / Level ──────────────────────────────────────────────────────────────
+function xpForLevel(lvl) { return lvl * 100; }
+
+function addXP(amount) {
+  const prev = state.level;
+  state.xp += amount;
+  state.totalXP += amount;
+  while (state.xp >= xpForLevel(state.level)) {
+    state.xp -= xpForLevel(state.level);
+    state.level++;
+  }
+  if (state.level > prev) showLevelUp(state.level);
+}
+
+// ─── History tracking ─────────────────────────────────────────────────────────
+function recordHistory(xpEarned) {
+  const t = today();
+  let entry = state.history.find(h => h.date === t);
+  if (!entry) {
+    entry = { date: t, xpEarned: 0, tasksDone: 0, cumulativeXP: state.totalXP };
+    state.history.push(entry);
+  }
+  entry.xpEarned += xpEarned;
+  entry.tasksDone += 1;
+  entry.cumulativeXP = state.totalXP;
+  // Keep last 90 days
+  state.history = state.history.slice(-90);
+}
+
+// ─── Chart ───────────────────────────────────────────────────────────────────
+function setRange(days, btn) {
+  chartRange = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function renderChart() {
+  // Build date range
+  const days = [];
+  for (let i = chartRange - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+
+  const histMap = {};
+  state.history.forEach(h => { histMap[h.date] = h; });
+
+  // Build cumulative XP series: fill forward from last known value
+  let lastCumXP = 0;
+  // Find the last known cumulative XP before our window
+  const beforeWindow = state.history.filter(h => h.date < days[0]);
+  if (beforeWindow.length) lastCumXP = beforeWindow[beforeWindow.length - 1].cumulativeXP;
+
+  const dailyXP = days.map(d => histMap[d]?.xpEarned ?? 0);
+  const cumulXP = days.map(d => {
+    if (histMap[d]) lastCumXP = histMap[d].cumulativeXP;
+    return lastCumXP;
+  });
+
+  const labels = days.map(d => {
+    const [,m,day] = d.split('-');
+    return `${parseInt(m)}/${parseInt(day)}`;
+  });
+
+  const ctx = document.getElementById('progress-chart').getContext('2d');
+  if (progressChart) progressChart.destroy();
+
+  progressChart = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'XP Earned',
+          data: dailyXP,
+          backgroundColor: 'rgba(124,58,237,0.5)',
+          borderColor: 'rgba(124,58,237,0.8)',
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y',
+        },
+        {
+          type: 'line',
+          label: 'Total XP',
+          data: cumulXP,
+          borderColor: '#06b6d4',
+          backgroundColor: 'rgba(6,182,212,0.08)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#06b6d4',
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }
+        },
+        tooltip: {
+          backgroundColor: '#1a1a2e',
+          borderColor: '#2d3748',
+          borderWidth: 1,
+          titleColor: '#e2e8f0',
+          bodyColor: '#94a3b8',
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 0 },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          position: 'left',
+          title: { display: true, text: 'XP / day', color: '#7c3aed', font: { size: 9 } },
+          ticks: { color: '#94a3b8', font: { size: 9 } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          beginAtZero: true,
+        },
+        y2: {
+          position: 'right',
+          title: { display: true, text: 'Total XP', color: '#06b6d4', font: { size: 9 } },
+          ticks: { color: '#94a3b8', font: { size: 9 } },
+          grid: { drawOnChartArea: false },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+function render() {
+  const xpMax = xpForLevel(state.level);
+  const pct = Math.min(100, (state.xp / xpMax) * 100);
+  document.getElementById('hdr-level').textContent = state.level;
+  document.getElementById('hdr-xp-fill').style.width = pct + '%';
+  document.getElementById('hdr-xp-cur').textContent = state.xp;
+  document.getElementById('hdr-xp-max').textContent = xpMax;
+  document.getElementById('avatar').textContent = AVATARS[Math.min(state.level - 1, AVATARS.length - 1)];
+
+  document.getElementById('stat-streak').textContent = state.streak;
+  const done = todayDone();
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-total-xp').textContent = state.totalXP;
+  document.getElementById('stat-level').textContent = state.level;
+  document.getElementById('stat-total-tasks').textContent = state.totalDone;
+
+  const goalPct = Math.min(100, (done / state.dailyGoal) * 100);
+  document.getElementById('goal-fill').style.width = goalPct + '%';
+  document.getElementById('goal-cur').textContent = done;
+  document.getElementById('goal-max').textContent = state.dailyGoal;
+  document.getElementById('goal-input').value = state.dailyGoal;
+
+  // Tasks
+  let filtered = [...state.tasks];
+  if (currentFilter === 'active') filtered = filtered.filter(t => !t.done);
+  if (currentFilter === 'done') filtered = filtered.filter(t => t.done);
+  filtered.sort((a, b) => a.done === b.done ? b.createdAt - a.createdAt : (a.done ? 1 : -1));
+
+  const list = document.getElementById('task-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">${currentFilter === 'done' ? '🏆' : '⚔️'}</div>${currentFilter === 'done' ? 'No completed quests yet.' : 'No active quests. Add one above!'}</div>`;
+  } else {
+    list.innerHTML = filtered.map(t => `
+      <div class="task-item ${t.done ? 'done' : ''}">
+        <button class="check-btn" onclick="toggleTask('${t.id}')">${t.done ? '✓' : ''}</button>
+        <div class="task-content">
+          <div class="task-text">${esc(t.text)}</div>
+          <div class="task-meta">
+            <span class="diff-badge diff-${t.difficulty}">${t.difficulty.toUpperCase()}</span>
+            <span class="xp-reward">+${XP_TABLE[t.difficulty]} XP</span>
+            <span class="task-time">${fmtDate(t.createdAt)}</span>
+          </div>
+        </div>
+        <button class="delete-btn" onclick="deleteTask('${t.id}')">✕</button>
+      </div>`).join('');
+  }
+
+  // Achievements
+  document.getElementById('ach-grid').innerHTML = ACHIEVEMENTS.map(a => {
+    const u = state.unlockedAchs.includes(a.id);
+    return `<div class="achievement ${u ? 'unlocked' : 'locked'}">
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-info">
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+        <div class="ach-status">${u ? '✓ UNLOCKED' : 'LOCKED'}</div>
+      </div></div>`;
+  }).join('');
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDate(ts) { const d = new Date(ts); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+function addTask() {
+  const inp = document.getElementById('task-input');
+  const diff = document.getElementById('diff-select').value;
+  const text = inp.value.trim();
+  if (!text) { inp.focus(); return; }
+  state.tasks.unshift({ id: Date.now().toString(), text, difficulty: diff, done: false, createdAt: Date.now(), doneDate: null });
+  inp.value = ''; inp.focus();
+  gistSave(); render(); toast(`📋 Quest added! +${XP_TABLE[diff]} XP on completion`);
+}
+
+function toggleTask(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  if (!t.done) {
+    t.done = true; t.doneDate = today();
+    markActiveToday();
+    const xp = XP_TABLE[t.difficulty];
+    addXP(xp);
+    recordHistory(xp);
+    state.totalDone++;
+    if (t.difficulty === 'epic') state.epicDone++;
+    const done = todayDone();
+    if (done === state.dailyGoal) { state.goalHitCount++; toast('🎯 Daily goal reached!', 'gold'); }
+    toast(`✅ +${xp} XP!`);
+    checkAchievements();
+    renderChart();
+  } else {
+    t.done = false; t.doneDate = null;
+  }
+  gistSave(); render();
+}
+
+function deleteTask(id) {
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  gistSave(); render();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); render();
+}
+
+function setGoal() {
+  const v = parseInt(document.getElementById('goal-input').value);
+  if (!v || v < 1) return;
+  state.dailyGoal = v; gistSave(); render(); toast(`🎯 Goal set to ${v} tasks`);
+}
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!state.unlockedAchs.includes(a.id) && a.check(state)) {
+      state.unlockedAchs.push(a.id);
+      toast(`🏆 Achievement: ${a.name}!`, 'gold');
+    }
+  });
+}
+
+// ─── Toast / Level up ────────────────────────────────────────────────────────
+function toast(msg, type = 'default') {
+  const c = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  if (type === 'gold') el.style.borderColor = 'var(--gold)';
+  if (type === 'err') el.style.borderColor = 'var(--red)';
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3100);
+}
+
+function showLevelUp(lvl) {
+  document.getElementById('levelup-num').textContent = lvl;
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelUp() { document.getElementById('levelup-overlay').classList.remove('show'); }
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+loadLocal();
+checkStreak();
+
+if (gistToken && gistId) {
+  setSyncStatus('busy', 'Syncing…');
+  gistLoad().then(ok => { if (ok) { render(); renderChart(); } });
+} else {
+  render();
+  renderChart();
+}
+
+if (gistToken) setSyncStatus('ok', 'Gist connected · tap ☁️ to sync');
+</script>
+</body>
+</html>
