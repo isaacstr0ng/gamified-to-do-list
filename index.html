@@ -181,6 +181,20 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .levelup-title{font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;}
 .levelup-num{font-size:48px;font-weight:800;color:#fff;line-height:1;}
 .levelup-close{margin-top:14px;padding:8px 22px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;}
+
+.ltg-section{margin-bottom:14px;}
+.ltg-add{display:flex;gap:5px;margin-bottom:8px;}
+.ltg-input{flex:1;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;}
+.ltg-input:focus{outline:none;border-color:var(--accent);}
+.ltg-input::placeholder{color:var(--muted);}
+.ltg-btn{padding:5px 8px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;}
+.ltg-list{display:flex;flex-direction:column;gap:4px;}
+.ltg-item{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:11px;}
+.ltg-item-text{flex:1;color:var(--text);line-height:1.3;}
+.ltg-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;opacity:0;transition:opacity .15s;flex-shrink:0;padding:0 2px;}
+.ltg-item:hover .ltg-del{opacity:1;}
+.ltg-del:hover{color:var(--red);}
+.ltg-empty{font-size:10px;color:var(--muted);text-align:center;padding:6px 0;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
@@ -296,7 +310,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     </div>
   </div>
   <div class="sidebar">
-    <div class="section">
+    <div class="ltg-section">
+      <div class="section-title" style="margin-bottom:7px">🎯 Long-Term Goals</div>
+      <div class="ltg-add">
+        <input type="text" class="ltg-input" id="ltg-input" placeholder="Add a long-term goal..." maxlength="100">
+        <button class="ltg-btn" onclick="addLTG()">+</button>
+      </div>
+      <div class="ltg-list" id="ltg-list"></div>
+    </div>
+        <div class="section">
       <div class="section-title" style="margin-bottom:8px">🌿 Today's Habits</div>
       <div class="habit-progress">
         <div class="habit-progress-label">Daily habit completion</div>
@@ -378,7 +400,7 @@ const DEFAULT_TOMORROW_TASKS=[
   {id:'sched_bankwest',text:'Call Bankwest',difficulty:'easy',scheduledFor:TOMORROW},
   {id:'sched_mug',text:'Start mugging for Jim and Georgia',difficulty:'hard',scheduledFor:TOMORROW},
 ];
-let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null};
+let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null,ltGoals:[]};
 let gistToken='',gistId='';
 let chartRange=7,progressChart=null,currentFilter='all',currentTab='quests',recFreq='daily',selectedDays=[];
 function today(){return new Date().toISOString().slice(0,10);}
@@ -549,7 +571,7 @@ function render(){
   document.getElementById('goal-cur').textContent=done;
   document.getElementById('goal-max').textContent=state.dailyGoal;
   document.getElementById('goal-input').value=state.dailyGoal;
-  renderTasks();renderHabitProgress();renderAchievements();
+  renderTasks();renderHabitProgress();renderAchievements();renderLTG();
   if(currentTab==='recurring')renderRecurringList();
 }
 function renderTasks(){
@@ -683,10 +705,24 @@ function toast(msg,type='default'){
 }
 function showLevelUp(lvl){document.getElementById('levelup-num').textContent=lvl;document.getElementById('levelup-overlay').classList.add('show');}
 function closeLevelUp(){document.getElementById('levelup-overlay').classList.remove('show');}
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/ g,'&gt;');}
 function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+
+function addLTG(){
+  const inp=document.getElementById('ltg-input');const text=inp.value.trim();
+  if(!text)return;
+  state.ltGoals.push({id:'ltg_'+Date.now(),text});
+  inp.value='';gistSave();renderLTG();toast('🎯 Goal added!');
+}
+function deleteLTG(id){state.ltGoals=state.ltGoals.filter(g=>g.id!==id);gistSave();renderLTG();}
+function renderLTG(){
+  const el=document.getElementById('ltg-list');
+  if(!state.ltGoals||!state.ltGoals.length){el.innerHTML='<div class="ltg-empty">No long-term goals yet</div>';return;}
+  el.innerHTML=state.ltGoals.map(g=>`<div class="ltg-item"><span class="ltg-item-text">${esc(g.text)}</span><button class="ltg-del" onclick="deleteLTG('${g.id}')">✕</button></div>`).join('');
+}
 document.getElementById('task-input').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 document.getElementById('rec-input').addEventListener('keydown',e=>{if(e.key==='Enter')addRecurring();});
+document.getElementById('ltg-input').addEventListener('keydown',e=>{if(e.key==='Enter')addLTG();});
 loadLocal();checkStreak();initDefaults();generateDailyTasks();
 if(gistToken&&gistId){gistLoad().then(()=>{render();renderChart();});}
 else{if(gistToken)setSyncStatus('ok','Token saved — click ☁️ to create Gist.');render();renderChart();}
