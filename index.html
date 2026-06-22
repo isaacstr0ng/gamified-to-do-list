@@ -198,6 +198,14 @@ body.modal-open{overflow:hidden;position:fixed;width:100%;}
 .ltg-empty{font-size:10px;color:var(--muted);text-align:center;padding:6px 0;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.task-edit-form{display:none;flex:1;gap:5px;align-items:center;min-width:0;}
+.edit-input{flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--accent);border-radius:6px;color:var(--text);font-size:12px;min-width:0;}
+.edit-diff-sel{padding:4px 5px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:10px;flex-shrink:0;}
+.edit-save-btn{padding:4px 8px;background:var(--green);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;flex-shrink:0;}
+.edit-cancel-btn{padding:4px 7px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;flex-shrink:0;}
+.edit-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 3px;opacity:0;transition:opacity .2s;flex-shrink:0;}
+.task-item:hover .edit-btn{opacity:1;}
+.meal-badge{font-size:9px;color:#f59e0b;background:rgba(245,158,11,.12);padding:1px 5px;border-radius:6px;}
 </style>
 </head>
 <body>
@@ -383,7 +391,6 @@ const DEFAULT_RECURRING=[
   {id:'r_skincare',text:'Skincare',difficulty:'easy',type:'daily',days:[0,1,2,3,4,5,6],category:'🌿 Habit'},
   {id:'r_water',text:'Drink 2 full water bottles',difficulty:'easy',type:'daily',days:[0,1,2,3,4,5,6],category:'💧 Habit'},
   {id:'r_stretch',text:'Stretch for 10 min',difficulty:'easy',type:'daily',days:[0,1,2,3,4,5,6],category:'🧘 Habit'},
-  {id:'r_meals',text:'Eat 3 meals',difficulty:'easy',type:'daily',days:[0,1,2,3,4,5,6],category:'🍽️ Habit'},
   {id:'r_song',text:'Find a new song',difficulty:'easy',type:'daily',days:[0,1,2,3,4,5,6],category:'🎵 Habit'},
   {id:'r_email',text:'Check emails',difficulty:'easy',type:'daily',days:[0,1,2,3,4,5,6],category:'📬 Habit'},
   {id:'r_mon_gym',text:'Chest & Tris',difficulty:'hard',type:'weekly',days:[1],category:'💪 Gym'},
@@ -400,6 +407,29 @@ const DEFAULT_TOMORROW_TASKS=[
   {id:'sched_sheets',text:'Sheets — check FB Marketplace first',difficulty:'easy',scheduledFor:TOMORROW},
   {id:'sched_bankwest',text:'Call Bankwest',difficulty:'easy',scheduledFor:TOMORROW},
   {id:'sched_mug',text:'Start mugging for Jim and Georgia',difficulty:'hard',scheduledFor:TOMORROW},
+];
+const WEEK_MEALS=[
+  {id:'meal_20260622_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-22',isMeal:true},
+  {id:'meal_20260622_l',text:'Lunch — Tuna, brown rice, spinach & cucumber bowl',difficulty:'easy',scheduledFor:'2026-06-22',isMeal:true},
+  {id:'meal_20260622_d',text:'Dinner — Chicken thigh stir-fry with capsicum, soy sauce & rice',difficulty:'medium',scheduledFor:'2026-06-22',isMeal:true},
+  {id:'meal_20260623_b',text:'Breakfast — Protein yogurt bowl with mango, raspberries & granola',difficulty:'easy',scheduledFor:'2026-06-23',isMeal:true},
+  {id:'meal_20260623_l',text:'Lunch — Chicken wrap with lettuce, tomato, avocado & mustard',difficulty:'easy',scheduledFor:'2026-06-23',isMeal:true},
+  {id:'meal_20260623_d',text:'Dinner — Beef mince bolognese with lentil pasta & parmesan',difficulty:'medium',scheduledFor:'2026-06-23',isMeal:true},
+  {id:'meal_20260624_b',text:'Breakfast — Spinach, feta & tomato omelette with wholegrain toast',difficulty:'easy',scheduledFor:'2026-06-24',isMeal:true},
+  {id:'meal_20260624_l',text:'Lunch — Leftover bolognese',difficulty:'easy',scheduledFor:'2026-06-24',isMeal:true},
+  {id:'meal_20260624_d',text:'Dinner — Crispy chicken wings with brown rice & side salad',difficulty:'medium',scheduledFor:'2026-06-24',isMeal:true},
+  {id:'meal_20260625_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-25',isMeal:true},
+  {id:'meal_20260625_l',text:'Lunch — Greek salad with chickpeas, feta, olives, cucumber & tuna',difficulty:'easy',scheduledFor:'2026-06-25',isMeal:true},
+  {id:'meal_20260625_d',text:'Dinner — Chicken thigh & lentil soup',difficulty:'easy',scheduledFor:'2026-06-25',isMeal:true},
+  {id:'meal_20260626_b',text:'Breakfast — Chia pudding with protein powder & frozen berries',difficulty:'easy',scheduledFor:'2026-06-26',isMeal:true},
+  {id:'meal_20260626_l',text:'Lunch — Turkey/chicken deli wrap with salad & hummus',difficulty:'easy',scheduledFor:'2026-06-26',isMeal:true},
+  {id:'meal_20260626_d',text:'Dinner — Steak with roasted capsicum & side salad',difficulty:'medium',scheduledFor:'2026-06-26',isMeal:true},
+  {id:'meal_20260627_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-27',isMeal:true},
+  {id:'meal_20260627_l',text:'Lunch — Tuna, rice cakes & cottage cheese bowl',difficulty:'easy',scheduledFor:'2026-06-27',isMeal:true},
+  {id:'meal_20260627_d',text:'Dinner — Chicken thigh stir-fry with capsicum & rice',difficulty:'easy',scheduledFor:'2026-06-27',isMeal:true},
+  {id:'meal_20260628_b',text:'Breakfast — Spinach, feta & tomato omelette with toast',difficulty:'easy',scheduledFor:'2026-06-28',isMeal:true},
+  {id:'meal_20260628_l',text:'Lunch — Chicken & hummus wrap',difficulty:'easy',scheduledFor:'2026-06-28',isMeal:true},
+  {id:'meal_20260628_d',text:'Dinner — Beef mince bolognese (batch cook for next week)',difficulty:'medium',scheduledFor:'2026-06-28',isMeal:true},
 ];
 let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null,ltGoals:[]};
 let gistToken='',gistId='';
@@ -420,7 +450,15 @@ function initDefaults(){
   if(!state.recurringTemplates||state.recurringTemplates.length===0){
     state.recurringTemplates=[...DEFAULT_RECURRING.map(r=>({...r,active:true}))];
   }
+  // Remove old 'eat 3 meals' recurring template and any generated tasks
+  state.recurringTemplates=(state.recurringTemplates||[]).filter(r=>r.id!=='r_meals');
+  state.tasks=(state.tasks||[]).filter(t=>t.recurringId!=='r_meals');
   DEFAULT_TOMORROW_TASKS.forEach(t=>{
+    if(!state.tasks.find(x=>x.id===t.id)){
+      state.tasks.push({...t,done:false,createdAt:Date.now(),doneDate:null,isScheduled:true});
+    }
+  });
+  WEEK_MEALS.forEach(t=>{
     if(!state.tasks.find(x=>x.id===t.id)){
       state.tasks.push({...t,done:false,createdAt:Date.now(),doneDate:null,isScheduled:true});
     }
@@ -598,7 +636,7 @@ function applyFilter(tasks){
 }
 function renderTaskList(tasks,isScheduled=false){
   if(!tasks.length)return'';
-  return tasks.map(t=>`<div class="task-item ${t.done?'done':''}">
+  return tasks.map(t=>`<div class="task-item ${t.done?'done':''}" data-task-id="${t.id}">
     <button class="check-btn" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</button>
     <div class="task-content">
       <div class="task-text">${esc(t.text)}</div>
@@ -606,12 +644,54 @@ function renderTaskList(tasks,isScheduled=false){
         <span class="diff-badge diff-${t.difficulty}">${t.difficulty.toUpperCase()}</span>
         <span class="xp-reward">+${XP_TABLE[t.difficulty]} XP</span>
         ${t.isRecurring?`<span class="rec-badge">🔄 ${t.category||'Recurring'}</span>`:''}
-        ${isScheduled?`<span class="sched-badge">📅 ${fmtDate(new Date(t.scheduledFor).getTime())}</span>`:''}
+        ${t.isMeal?'<span class="meal-badge">🍽️ Meal</span>':''}
+        ${isScheduled&&!t.isMeal?`<span class="sched-badge">📅 ${fmtDate(new Date(t.scheduledFor).getTime())}</span>`:''}
         ${!t.isRecurring&&!isScheduled?`<span class="task-time">${fmtDate(t.createdAt)}</span>`:''}
       </div>
     </div>
+    <div class="task-edit-form">
+      <input class="edit-input" type="text" value="${esc(t.text)}" onkeydown="if(event.key==='Enter')saveEdit('${t.id}');if(event.key==='Escape')cancelEdit('${t.id}')">
+      <select class="edit-diff-sel">
+        <option value="easy" ${t.difficulty==='easy'?'selected':''}>Easy</option>
+        <option value="medium" ${t.difficulty==='medium'?'selected':''}>Med</option>
+        <option value="hard" ${t.difficulty==='hard'?'selected':''}>Hard</option>
+        <option value="epic" ${t.difficulty==='epic'?'selected':''}>Epic</option>
+      </select>
+      <button class="edit-save-btn" onclick="saveEdit('${t.id}')">✓</button>
+      <button class="edit-cancel-btn" onclick="cancelEdit('${t.id}')">✕</button>
+    </div>
+    <button class="edit-btn" onclick="editTask('${t.id}')" title="Edit">✏️</button>
     <button class="delete-btn" onclick="deleteTask('${t.id}')">✕</button>
   </div>`).join('');
+}
+function editTask(id){
+  const item=document.querySelector('[data-task-id="'+id+'"]');
+  if(!item)return;
+  item.querySelector('.task-content').style.display='none';
+  item.querySelector('.edit-btn').style.display='none';
+  item.querySelector('.delete-btn').style.display='none';
+  const form=item.querySelector('.task-edit-form');
+  form.style.display='flex';
+  form.querySelector('.edit-input').select();
+}
+function saveEdit(id){
+  const t=state.tasks.find(x=>x.id===id);
+  if(!t)return;
+  const item=document.querySelector('[data-task-id="'+id+'"]');
+  if(!item)return;
+  const newText=item.querySelector('.edit-input').value.trim();
+  const newDiff=item.querySelector('.edit-diff-sel').value;
+  if(!newText)return;
+  t.text=newText;t.difficulty=newDiff;
+  gistSave();render();
+}
+function cancelEdit(id){
+  const item=document.querySelector('[data-task-id="'+id+'"]');
+  if(!item)return;
+  item.querySelector('.task-content').style.display='';
+  item.querySelector('.edit-btn').style.display='';
+  item.querySelector('.delete-btn').style.display='';
+  item.querySelector('.task-edit-form').style.display='none';
 }
 function renderHabitProgress(){
   const t=today();const habitTasks=state.tasks.filter(x=>x.isRecurring&&x.scheduledFor===t);
@@ -631,7 +711,7 @@ function renderRecurringList(){
   const weekly=state.recurringTemplates.filter(r=>r.type==='weekly');
   let html='';
   if(daily.length){html+='<div class="rec-group-header">📅 Daily Habits</div>';html+=daily.map(r=>recTemplateHTML(r)).join('');}
-  if(weekly.length){html+='<div class="rec-group-header">🏆 Weekly</div>';html+=weekly.map(r=>recTemplateHTML(r)).join('');}
+  if(weekly.length){html+='<div class="rec-group-header">📆 Weekly</div>';html+=weekly.map(r=>recTemplateHTML(r)).join('');}
   if(!html)html='<div class="empty-state"><div class="icon">🔄</div>No recurring quests yet.</div>';
   document.getElementById('recurring-list').innerHTML=html;
 }
