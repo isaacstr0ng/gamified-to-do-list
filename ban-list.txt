@@ -1,0 +1,13 @@
+# Ingredient Ban List
+# Quest Log — updated 2026-06-22
+# These ingredients must not appear in future meal plans or shopping lists.
+
+BANNED INGREDIENTS:
+- Edamame
+- Salmon fillets
+- Broccoli
+- Sweet potato
+- Rolled oats
+
+NOTES:
+- Chicken wings: one-off only (week of Jun 22). Keep only if user confirms they like the recipe.
