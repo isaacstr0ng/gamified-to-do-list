@@ -206,6 +206,12 @@ body.modal-open{overflow:hidden;position:fixed;width:100%;}
 .edit-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 3px;opacity:0;transition:opacity .2s;flex-shrink:0;}
 .task-item:hover .edit-btn{opacity:1;}
 .meal-badge{font-size:9px;color:#f59e0b;background:rgba(245,158,11,.12);padding:1px 5px;border-radius:6px;}
+.date-nav{display:flex;align-items:center;gap:4px;margin-left:auto;}
+.date-nav-btn{padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:14px;cursor:pointer;line-height:1;}
+.date-nav-btn:hover{border-color:var(--accent);}
+.date-nav-btn:disabled{opacity:.3;cursor:default;}
+.date-label{font-size:11px;color:var(--text);min-width:46px;text-align:center;white-space:nowrap;}
+.habit-streak{font-size:9px;color:var(--gold);background:rgba(245,158,11,.15);padding:1px 5px;border-radius:6px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -284,6 +290,11 @@ body.modal-open{overflow:hidden;position:fixed;width:100%;}
         <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
         <button class="filter-btn" onclick="setFilter('active',this)">Active</button>
         <button class="filter-btn" onclick="setFilter('done',this)">Done</button>
+        <div class="date-nav">
+          <button class="date-nav-btn" id="day-prev-btn" onclick="shiftDay(-1)">&#8249;</button>
+          <span class="date-label" id="view-date-label">Today</span>
+          <button class="date-nav-btn" id="day-next-btn" onclick="shiftDay(1)" disabled>&#8250;</button>
+        </div>
       </div>
       <div id="habits-section"></div>
       <div id="quests-section"></div>
@@ -431,9 +442,9 @@ const WEEK_MEALS=[
   {id:'meal_20260628_l',text:'Lunch — Chicken & hummus wrap',difficulty:'easy',scheduledFor:'2026-06-28',isMeal:true},
   {id:'meal_20260628_d',text:'Dinner — Beef mince bolognese (batch cook for next week)',difficulty:'medium',scheduledFor:'2026-06-28',isMeal:true},
 ];
-let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null,ltGoals:[]};
+let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null,ltGoals:[],habitStreaks:{}};
 let gistToken='',gistId='';
-let chartRange=7,progressChart=null,currentFilter='all',currentTab='quests',recFreq='daily',selectedDays=[];
+let chartRange=7,progressChart=null,currentFilter='all',currentTab='quests',recFreq='daily',selectedDays=[],viewDate=null;
 function today(){return new Date().toISOString().slice(0,10);}
 function todayDone(){return state.tasks.filter(t=>t.done&&t.doneDate===today()).length;}
 function saveLocal(){localStorage.setItem('questlog_v4',JSON.stringify(state));}
@@ -592,6 +603,24 @@ function renderChart(){
     }
   });
 }
+function shiftDay(delta){
+  const t=today();
+  if(!viewDate)viewDate=t;
+  const d=new Date(viewDate+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  viewDate=d.toISOString().slice(0,10);
+  if(viewDate>=t)viewDate=t;
+  updateDateLabel();render();
+}
+function updateDateLabel(){
+  const t=today();
+  const vd=viewDate||t;
+  const lbl=document.getElementById('view-date-label');
+  const nxt=document.getElementById('day-next-btn');
+  if(!lbl)return;
+  if(vd===t){lbl.textContent='Today';if(nxt)nxt.disabled=true;}
+  else{const d=new Date(vd+'T00:00:00');lbl.textContent=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});if(nxt)nxt.disabled=false;}
+}
 function render(){
   const xpMax=xpForLevel(state.level);
   document.getElementById('hdr-level').textContent=state.level;
@@ -614,7 +643,9 @@ function render(){
 }
 function renderTasks(){
   const t=today();
-  const habitTasks=state.tasks.filter(x=>x.isRecurring&&x.scheduledFor===t);
+  const vd=viewDate||t;
+  updateDateLabel();
+  const habitTasks=state.tasks.filter(x=>x.isRecurring&&x.scheduledFor===vd);
   const scheduledFuture=state.tasks.filter(x=>x.scheduledFor&&x.scheduledFor>t);
   const regularTasks=state.tasks.filter(x=>!x.isRecurring&&(!x.scheduledFor||x.scheduledFor<=t));
   const habSec=document.getElementById('habits-section');
@@ -642,7 +673,7 @@ function renderTaskList(tasks,isScheduled=false){
       <div class="task-meta">
         <span class="diff-badge diff-${t.difficulty}">${t.difficulty.toUpperCase()}</span>
         <span class="xp-reward">+${XP_TABLE[t.difficulty]} XP</span>
-        ${t.isRecurring?`<span class="rec-badge">🔄 ${t.category||'Recurring'}</span>`:''}
+        ${t.isRecurring?`<span class="rec-badge">🔄 ${t.category||'Recurring'}</span>${(state.habitStreaks&&state.habitStreaks[t.recurringId]&&state.habitStreaks[t.recurringId].streak>0)?`<span class="habit-streak">🔥 ${state.habitStreaks[t.recurringId].streak}</span>`:''}`:''}
         ${t.isMeal?'<span class="meal-badge">🍽️ Meal</span>':''}
         ${isScheduled&&!t.isMeal?`<span class="sched-badge">📅 ${fmtDate(new Date(t.scheduledFor).getTime())}</span>`:''}
         ${!t.isRecurring&&!isScheduled?`<span class="task-time">${fmtDate(t.createdAt)}</span>`:''}
@@ -769,9 +800,10 @@ function toggleTask(id){
     t.done=true;t.doneDate=today();markActiveToday();
     const xp=XP_TABLE[t.difficulty];addXP(xp);recordHistory(xp);
     state.totalDone++;if(t.difficulty==='epic')state.epicDone++;
+    if(t.recurringId){if(!state.habitStreaks)state.habitStreaks={};const hd=state.habitStreaks[t.recurringId]||{streak:0,lastDone:null};const yd=new Date();yd.setDate(yd.getDate()-1);const ys=yd.toISOString().slice(0,10);hd.streak=(hd.lastDone===ys)?hd.streak+1:1;hd.lastDone=today();state.habitStreaks[t.recurringId]=hd;}
     if(todayDone()===state.dailyGoal){state.goalHitCount++;toast('🎯 Daily goal reached!','gold');}
     toast(`✅ +${xp} XP!`);checkAchievements();renderChart();
-  }else{t.done=false;t.doneDate=null;}
+  }else{t.done=false;t.doneDate=null;if(t.recurringId&&state.habitStreaks&&state.habitStreaks[t.recurringId]){const hd=state.habitStreaks[t.recurringId];if(hd.lastDone===today()){hd.streak=Math.max(0,hd.streak-1);if(!hd.streak)delete state.habitStreaks[t.recurringId];}}}
   gistSave();render();
 }
 function deleteTask(id){state.tasks=state.tasks.filter(t=>t.id!==id);gistSave();render();}
