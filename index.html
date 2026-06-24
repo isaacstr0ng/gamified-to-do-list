@@ -466,7 +466,6 @@ function initDefaults(){
 }
 function generateDailyTasks(){
   const t=today();
-  if(state.lastGenDate===t)return;
   const dow=new Date().getDay();
   state.recurringTemplates.filter(r=>r.active&&r.days.includes(dow)).forEach(tmpl=>{
     const exists=state.tasks.some(x=>x.recurringId===tmpl.id&&x.scheduledFor===t);
@@ -805,7 +804,7 @@ document.getElementById('task-input').addEventListener('keydown',e=>{if(e.key===
 document.getElementById('rec-input').addEventListener('keydown',e=>{if(e.key==='Enter')addRecurring();});
 document.getElementById('ltg-input').addEventListener('keydown',e=>{if(e.key==='Enter')addLTG();});
 loadLocal();checkStreak();initDefaults();generateDailyTasks();
-if(gistToken&&gistId){gistLoad().then(()=>{render();renderChart();});}
+if(gistToken&&gistId){gistLoad().then(()=>{generateDailyTasks();render();renderChart();});}
 else{if(gistToken)setSyncStatus('ok','Token saved — click ☁️ to create Gist.');render();renderChart();}
 </script>
 </body>
