@@ -206,6 +206,10 @@ body.modal-open{overflow:hidden;position:fixed;width:100%;}
 .edit-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 3px;opacity:0;transition:opacity .2s;flex-shrink:0;}
 .task-item:hover .edit-btn{opacity:1;}
 .meal-badge{font-size:9px;color:#f59e0b;background:rgba(245,158,11,.12);padding:1px 5px;border-radius:6px;}
+.drag-handle{color:var(--border);cursor:grab;font-size:16px;padding:0 4px 0 0;flex-shrink:0;touch-action:none;user-select:none;-webkit-user-select:none;line-height:1;}
+.drag-handle:active{cursor:grabbing;}
+.task-item.dragging{opacity:0.25;border-style:dashed!important;}
+.task-item.drag-over{border-color:var(--accent2)!important;border-width:2px!important;}
 .date-nav{display:flex;align-items:center;gap:4px;margin-left:auto;}
 .date-nav-btn{padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:14px;cursor:pointer;line-height:1;}
 .date-nav-btn:hover{border-color:var(--accent);}
@@ -445,7 +449,7 @@ const WEEK_MEALS=[
 let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null,ltGoals:[],habitStreaks:{}};
 let gistToken='',gistId='';
 let chartRange=7,progressChart=null,currentFilter='all',currentTab='quests',recFreq='daily',selectedDays=[],viewDate=null;
-function today(){return new Date().toISOString().slice(0,10);}
+function today(){const _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');}
 function todayDone(){return state.tasks.filter(t=>t.done&&t.doneDate===today()).length;}
 function saveLocal(){localStorage.setItem('questlog_v4',JSON.stringify(state));}
 function loadLocal(){
@@ -606,10 +610,12 @@ function renderChart(){
 function shiftDay(delta){
   const t=today();
   if(!viewDate)viewDate=t;
-  const d=new Date(viewDate+'T00:00:00');
-  d.setDate(d.getDate()+delta);
-  viewDate=d.toISOString().slice(0,10);
-  if(viewDate>=t)viewDate=t;
+  const _p=viewDate.split('-');
+  const _dt=new Date(+_p[0],+_p[1]-1,+_p[2]);
+  _dt.setDate(_dt.getDate()+delta);
+  const _y=_dt.getFullYear(),_m=String(_dt.getMonth()+1).padStart(2,'0'),_d2=String(_dt.getDate()).padStart(2,'0');
+  viewDate=_y+'-'+_m+'-'+_d2;
+  if(viewDate>t)viewDate=t;
   updateDateLabel();render();
 }
 function updateDateLabel(){
@@ -662,11 +668,12 @@ function applyFilter(tasks){
   let f=[...tasks];
   if(currentFilter==='active')f=f.filter(t=>!t.done);
   if(currentFilter==='done')f=f.filter(t=>t.done);
-  return f.sort((a,b)=>a.done===b.done?b.createdAt-a.createdAt:(a.done?1:-1));
+  return f.sort((a,b)=>a.done===b.done?0:(a.done?1:-1));
 }
 function renderTaskList(tasks,isScheduled=false){
   if(!tasks.length)return'';
-  return tasks.map(t=>`<div class="task-item ${t.done?'done':''}" data-task-id="${t.id}">
+  return tasks.map(t=>`<div class="task-item ${t.done?'done':''}" data-task-id="${t.id}" draggable="true" ondragstart="onDragStart(event,'${t.id}')" ondragend="onDragEnd()" ondragover="onDragOver(event,'${t.id}')" ondrop="onDrop(event,'${t.id}')">
+    <span class="drag-handle" ontouchstart="onTouchDragStart(event,'${t.id}')">⠿</span>
     <button class="check-btn" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</button>
     <div class="task-content">
       <div class="task-text">${esc(t.text)}</div>
@@ -820,6 +827,76 @@ function closeLevelUp(){document.getElementById('levelup-overlay').classList.rem
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
 
+// ── Drag & Drop ──
+let _dId=null;
+function onDragStart(e,id){
+  _dId=id;
+  setTimeout(()=>{const el=document.querySelector('[data-task-id="'+id+'"]');if(el)el.classList.add('dragging');},0);
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',id);
+}
+function onDragEnd(){
+  document.querySelectorAll('.task-item').forEach(el=>el.classList.remove('dragging','drag-over'));
+  _dId=null;
+}
+function onDragOver(e,id){
+  if(id===_dId)return;
+  e.preventDefault();
+  document.querySelectorAll('.task-item').forEach(el=>el.classList.remove('drag-over'));
+  const el=document.querySelector('[data-task-id="'+id+'"]');
+  if(el)el.classList.add('drag-over');
+}
+function onDrop(e,id){
+  e.preventDefault();
+  document.querySelectorAll('.task-item').forEach(el=>el.classList.remove('drag-over','dragging'));
+  if(!_dId||id===_dId){_dId=null;return;}
+  const si=state.tasks.findIndex(t=>t.id===_dId),ti=state.tasks.findIndex(t=>t.id===id);
+  if(si>=0&&ti>=0){const[tk]=state.tasks.splice(si,1);state.tasks.splice(ti,0,tk);}
+  _dId=null;gistSave();render();
+}
+// Touch drag (iPhone / iPad)
+let _tid=null,_tgh=null;
+function onTouchDragStart(e,id){
+  e.preventDefault();
+  _tid=id;
+  const item=document.querySelector('[data-task-id="'+id+'"]');
+  if(!item)return;
+  item.classList.add('dragging');
+  _tgh=item.cloneNode(true);
+  const r=item.getBoundingClientRect();
+  Object.assign(_tgh.style,{position:'fixed',opacity:'0.85',pointerEvents:'none',zIndex:'9999',
+    width:r.width+'px',height:r.height+'px',
+    top:(e.touches[0].clientY-r.height/2)+'px',left:r.left+'px',
+    borderRadius:'10px',boxShadow:'0 8px 24px rgba(0,0,0,.5)',background:'var(--surface2)'});
+  document.body.appendChild(_tgh);
+}
+document.addEventListener('touchmove',function(e){
+  if(!_tid||!_tgh)return;
+  e.preventDefault();
+  const tc=e.touches[0];
+  const gh=_tgh;
+  gh.style.top=(tc.clientY-parseInt(gh.style.height||'44')/2)+'px';
+  gh.style.display='none';
+  const under=document.elementFromPoint(tc.clientX,tc.clientY);
+  gh.style.display='';
+  document.querySelectorAll('.task-item').forEach(i=>i.classList.remove('drag-over'));
+  const ti=under?.closest('[data-task-id]');
+  if(ti&&ti.dataset.taskId!==_tid)ti.classList.add('drag-over');
+},{passive:false});
+document.addEventListener('touchend',function(e){
+  if(!_tid)return;
+  const tc=e.changedTouches[0];
+  if(_tgh){_tgh.remove();_tgh=null;}
+  document.querySelectorAll('.task-item').forEach(i=>i.classList.remove('dragging','drag-over'));
+  const under=document.elementFromPoint(tc.clientX,tc.clientY);
+  const tgt=under?.closest('[data-task-id]');
+  if(tgt&&tgt.dataset.taskId!==_tid){
+    const si=state.tasks.findIndex(x=>x.id===_tid),ti2=state.tasks.findIndex(x=>x.id===tgt.dataset.taskId);
+    if(si>=0&&ti2>=0){const[tk]=state.tasks.splice(si,1);state.tasks.splice(ti2,0,tk);}
+    gistSave();
+  }
+  _tid=null;render();
+});
 function addLTG(){
   const inp=document.getElementById('ltg-input');const text=inp.value.trim();
   if(!text)return;
