@@ -415,7 +415,7 @@ const DEFAULT_RECURRING=[
   {id:'r_thu_box',text:'Boxing 5pm–7pm',difficulty:'medium',type:'weekly',days:[4],category:'🥊 Boxing'},
   {id:'r_fri_gym',text:'Back, Bis & Forearms',difficulty:'hard',type:'weekly',days:[5],category:'💪 Gym'},
 ];
-const TOMORROW=(()=>{const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
+const TOMORROW=(()=>{const _d=new Date();_d.setDate(_d.getDate()+1);return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
 const DEFAULT_TOMORROW_TASKS=[
   {id:'sched_grocery',text:'Grocery shopping',difficulty:'medium',scheduledFor:TOMORROW},
   {id:'sched_doona',text:'New doona — pay with new card',difficulty:'medium',scheduledFor:TOMORROW},
@@ -423,28 +423,34 @@ const DEFAULT_TOMORROW_TASKS=[
   {id:'sched_bankwest',text:'Call Bankwest',difficulty:'easy',scheduledFor:TOMORROW},
   {id:'sched_mug',text:'Start mugging for Jim and Georgia',difficulty:'hard',scheduledFor:TOMORROW},
 ];
-const WEEK_MEALS=[
-  {id:'meal_20260622_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-22',isMeal:true},
-  {id:'meal_20260622_l',text:'Lunch — Tuna, brown rice, spinach & cucumber bowl',difficulty:'easy',scheduledFor:'2026-06-22',isMeal:true},
-  {id:'meal_20260622_d',text:'Dinner — Chicken thigh stir-fry with capsicum, soy sauce & rice',difficulty:'medium',scheduledFor:'2026-06-22',isMeal:true},
-  {id:'meal_20260623_b',text:'Breakfast — Protein yogurt bowl with mango, raspberries & granola',difficulty:'easy',scheduledFor:'2026-06-23',isMeal:true},
-  {id:'meal_20260623_l',text:'Lunch — Chicken wrap with lettuce, tomato, avocado & mustard',difficulty:'easy',scheduledFor:'2026-06-23',isMeal:true},
-  {id:'meal_20260623_d',text:'Dinner — Beef mince bolognese with lentil pasta & parmesan',difficulty:'medium',scheduledFor:'2026-06-23',isMeal:true},
-  {id:'meal_20260624_b',text:'Breakfast — Spinach, feta & tomato omelette with wholegrain toast',difficulty:'easy',scheduledFor:'2026-06-24',isMeal:true},
-  {id:'meal_20260624_l',text:'Lunch — Leftover bolognese',difficulty:'easy',scheduledFor:'2026-06-24',isMeal:true},
-  {id:'meal_20260624_d',text:'Dinner — Crispy chicken wings with brown rice & side salad',difficulty:'medium',scheduledFor:'2026-06-24',isMeal:true},
-  {id:'meal_20260625_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-25',isMeal:true},
-  {id:'meal_20260625_l',text:'Lunch — Greek salad with chickpeas, feta, olives, cucumber & tuna',difficulty:'easy',scheduledFor:'2026-06-25',isMeal:true},
-  {id:'meal_20260625_d',text:'Dinner — Chicken thigh & lentil soup',difficulty:'easy',scheduledFor:'2026-06-25',isMeal:true},
-  {id:'meal_20260626_b',text:'Breakfast — Chia pudding with protein powder & frozen berries',difficulty:'easy',scheduledFor:'2026-06-26',isMeal:true},
-  {id:'meal_20260626_l',text:'Lunch — Turkey/chicken deli wrap with salad & hummus',difficulty:'easy',scheduledFor:'2026-06-26',isMeal:true},
-  {id:'meal_20260626_d',text:'Dinner — Steak with roasted capsicum & side salad',difficulty:'medium',scheduledFor:'2026-06-26',isMeal:true},
-  {id:'meal_20260627_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-27',isMeal:true},
-  {id:'meal_20260627_l',text:'Lunch — Tuna, rice cakes & cottage cheese bowl',difficulty:'easy',scheduledFor:'2026-06-27',isMeal:true},
-  {id:'meal_20260627_d',text:'Dinner — Chicken thigh stir-fry with capsicum & rice',difficulty:'easy',scheduledFor:'2026-06-27',isMeal:true},
-  {id:'meal_20260628_b',text:'Breakfast — Spinach, feta & tomato omelette with toast',difficulty:'easy',scheduledFor:'2026-06-28',isMeal:true},
-  {id:'meal_20260628_l',text:'Lunch — Chicken & hummus wrap',difficulty:'easy',scheduledFor:'2026-06-28',isMeal:true},
-  {id:'meal_20260628_d',text:'Dinner — Beef mince bolognese (batch cook for next week)',difficulty:'medium',scheduledFor:'2026-06-28',isMeal:true},
+const CURRENT_MEALS=[
+  // Mon 29 Jun — skip breakfast (already lunchtime)
+  {id:'meal_20260629_l',text:'Lunch — Tuna, brown rice, spinach & cucumber bowl',difficulty:'easy',scheduledFor:'2026-06-29',isMeal:true},
+  {id:'meal_20260629_d',text:'Dinner — Beef mince bolognese with lentil pasta & parmesan',difficulty:'medium',scheduledFor:'2026-06-29',isMeal:true},
+  // Tue 30 Jun
+  {id:'meal_20260630_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-06-30',isMeal:true},
+  {id:'meal_20260630_l',text:'Lunch — Greek salad with chickpeas, feta, olives, cucumber & tuna',difficulty:'easy',scheduledFor:'2026-06-30',isMeal:true},
+  {id:'meal_20260630_d',text:'Dinner — Steak with roasted capsicum & side salad',difficulty:'medium',scheduledFor:'2026-06-30',isMeal:true},
+  // Wed 1 Jul
+  {id:'meal_20260701_b',text:'Breakfast — Protein yogurt bowl with mango, raspberries & granola',difficulty:'easy',scheduledFor:'2026-07-01',isMeal:true},
+  {id:'meal_20260701_l',text:'Lunch — Leftover bolognese',difficulty:'easy',scheduledFor:'2026-07-01',isMeal:true},
+  {id:'meal_20260701_d',text:'Dinner — Beef mince & lentil soup',difficulty:'easy',scheduledFor:'2026-07-01',isMeal:true},
+  // Thu 2 Jul
+  {id:'meal_20260702_b',text:'Breakfast — Spinach, feta & tomato omelette with wholegrain toast',difficulty:'easy',scheduledFor:'2026-07-02',isMeal:true},
+  {id:'meal_20260702_l',text:'Lunch — Tuna, rice cakes & cottage cheese bowl',difficulty:'easy',scheduledFor:'2026-07-02',isMeal:true},
+  {id:'meal_20260702_d',text:'Dinner — Egg fried rice with bacon, capsicum & mixed veg',difficulty:'medium',scheduledFor:'2026-07-02',isMeal:true},
+  // Fri 3 Jul
+  {id:'meal_20260703_b',text:'Breakfast — Chia pudding with protein powder & frozen berries',difficulty:'easy',scheduledFor:'2026-07-03',isMeal:true},
+  {id:'meal_20260703_l',text:'Lunch — Turkey/chicken deli wrap with salad & hummus',difficulty:'easy',scheduledFor:'2026-07-03',isMeal:true},
+  {id:'meal_20260703_d',text:'Dinner — Steak with roasted capsicum & side salad',difficulty:'medium',scheduledFor:'2026-07-03',isMeal:true},
+  // Sat 4 Jul
+  {id:'meal_20260704_b',text:'Breakfast — Bacon, eggs & avocado toast',difficulty:'easy',scheduledFor:'2026-07-04',isMeal:true},
+  {id:'meal_20260704_l',text:'Lunch — Greek salad with chickpeas, feta, olives, cucumber & tuna',difficulty:'easy',scheduledFor:'2026-07-04',isMeal:true},
+  {id:'meal_20260704_d',text:'Dinner — Beef mince & capsicum rice bowl',difficulty:'medium',scheduledFor:'2026-07-04',isMeal:true},
+  // Sun 5 Jul
+  {id:'meal_20260705_b',text:'Breakfast — Protein yogurt bowl with banana, frozen berries & granola',difficulty:'easy',scheduledFor:'2026-07-05',isMeal:true},
+  {id:'meal_20260705_l',text:'Lunch — Tuna, spinach & avocado salad bowl',difficulty:'easy',scheduledFor:'2026-07-05',isMeal:true},
+  {id:'meal_20260705_d',text:'Dinner — Beef mince bolognese (batch cook for next week)',difficulty:'medium',scheduledFor:'2026-07-05',isMeal:true},
 ];
 let state={tasks:[],level:1,xp:0,totalXP:0,streak:0,lastActiveDate:null,totalDone:0,epicDone:0,goalHitCount:0,dailyGoal:5,unlockedAchs:[],history:[],recurringTemplates:[],lastGenDate:null,ltGoals:[],habitStreaks:{}};
 let gistToken='',gistId='';
@@ -461,6 +467,17 @@ function loadLocal(){
   gistToken=localStorage.getItem('gist_token')||'';
   gistId=localStorage.getItem('gist_id')||'';
 }
+function seedMeals(){
+  // Remove all isMeal tasks not in CURRENT_MEALS (purges outdated weeks)
+  const keep=new Set(CURRENT_MEALS.map(m=>m.id));
+  state.tasks=(state.tasks||[]).filter(t=>!t.isMeal||keep.has(t.id));
+  // Add any missing current meals (preserves done status if already checked)
+  CURRENT_MEALS.forEach(t=>{
+    if(!state.tasks.find(x=>x.id===t.id)){
+      state.tasks.push({...t,done:false,createdAt:Date.now(),doneDate:null,isScheduled:true});
+    }
+  });
+}
 function initDefaults(){
   if(!state.recurringTemplates||state.recurringTemplates.length===0){
     state.recurringTemplates=[...DEFAULT_RECURRING.map(r=>({...r,active:true}))];
@@ -473,11 +490,7 @@ function initDefaults(){
       state.tasks.push({...t,done:false,createdAt:Date.now(),doneDate:null,isScheduled:true});
     }
   });
-  WEEK_MEALS.forEach(t=>{
-    if(!state.tasks.find(x=>x.id===t.id)){
-      state.tasks.push({...t,done:false,createdAt:Date.now(),doneDate:null,isScheduled:true});
-    }
-  });
+  seedMeals();
 }
 function generateDailyTasks(){
   const t=today();
@@ -913,7 +926,7 @@ document.getElementById('task-input').addEventListener('keydown',e=>{if(e.key===
 document.getElementById('rec-input').addEventListener('keydown',e=>{if(e.key==='Enter')addRecurring();});
 document.getElementById('ltg-input').addEventListener('keydown',e=>{if(e.key==='Enter')addLTG();});
 loadLocal();checkStreak();initDefaults();generateDailyTasks();
-if(gistToken&&gistId){gistLoad().then(()=>{generateDailyTasks();render();renderChart();});}
+if(gistToken&&gistId){gistLoad().then(()=>{seedMeals();generateDailyTasks();gistSave();render();renderChart();});}
 else{if(gistToken)setSyncStatus('ok','Token saved — click ☁️ to create Gist.');render();renderChart();}
 </script>
 </body>
