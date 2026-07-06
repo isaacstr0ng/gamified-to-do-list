@@ -216,6 +216,23 @@ body.modal-open{overflow:hidden;position:fixed;width:100%;}
 .date-nav-btn:disabled{opacity:.3;cursor:default;}
 .date-label{font-size:11px;color:var(--text);min-width:46px;text-align:center;white-space:nowrap;}
 .habit-streak{font-size:9px;color:var(--gold);background:rgba(245,158,11,.15);padding:1px 5px;border-radius:6px;font-weight:700;}
+.habit-total{font-size:9px;color:var(--green);background:rgba(16,185,129,.15);padding:1px 5px;border-radius:6px;font-weight:700;margin-left:2px;}
+.habits-link-btn{background:none;border:none;color:inherit;font-size:inherit;font-weight:inherit;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
+#habits-page{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:1000;overflow-y:auto;padding:16px;}
+#habits-page.show{display:block;}
+.hpage-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;}
+.hpage-back{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px;}
+.hpage-title{font-size:18px;font-weight:700;}
+.habit-track-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;}
+.habit-track-name{font-size:13px;font-weight:600;margin-bottom:6px;}
+.habit-track-stats{display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:var(--muted);flex-wrap:wrap;}
+.habit-track-stats b{color:var(--text);}
+.habit-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.habit-cal-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;}
+.hday-label{font-size:8px;color:var(--muted);text-align:center;}
+.hday{height:22px;border-radius:3px;background:var(--surface2);}
+.hday.done{background:var(--green);opacity:0.85;}
+.hday.today-cell{outline:2px solid var(--accent);outline-offset:1px;}
 </style>
 </head>
 <body>
@@ -343,7 +360,7 @@ body.modal-open{overflow:hidden;position:fixed;width:100%;}
       <div class="ltg-list" id="ltg-list"></div>
     </div>
         <div class="section">
-      <div class="section-title" style="margin-bottom:8px">🌿 Today's Habits</div>
+      <div class="section-title" style="margin-bottom:8px">🌿 Habits</div>
       <div class="habit-progress">
         <div class="habit-progress-label">Daily habit completion</div>
         <div class="habit-progress-bar-bg"><div class="habit-progress-bar-fill" id="habit-fill" style="width:0%"></div></div>
@@ -501,6 +518,50 @@ function generateDailyTasks(){
     state.tasks.push({id:`rec_${tmpl.id}_${t.replace(/-/g,'')}`,text:tmpl.text,difficulty:tmpl.difficulty,done:false,createdAt:Date.now(),doneDate:null,scheduledFor:t,recurringId:tmpl.id,category:tmpl.category||'',isRecurring:true});
   });
   state.lastGenDate=t;
+}
+function ensureHabitsForDate(dateStr){
+  const _dt=new Date(dateStr+'T12:00:00');
+  const dow=_dt.getDay();
+  state.recurringTemplates.filter(r=>r.active&&r.days.includes(dow)).forEach(tmpl=>{
+    const exists=state.tasks.some(x=>x.recurringId===tmpl.id&&x.scheduledFor===dateStr);
+    if(exists)return;
+    state.tasks.push({id:`rec_${tmpl.id}_${dateStr.replace(/-/g,'')}`,text:tmpl.text,difficulty:tmpl.difficulty,done:false,createdAt:Date.now(),doneDate:null,scheduledFor:dateStr,recurringId:tmpl.id,category:tmpl.category||'',isRecurring:true});
+  });
+}
+function showHabitsPage(){
+  const pg=document.getElementById('habits-page');
+  if(!pg)return;
+  const td=today();
+  const days=[];
+  for(let i=27;i>=0;i--){
+    const _d=new Date();_d.setDate(_d.getDate()-i);
+    const ds=_d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');
+    days.push(ds);
+  }
+  const activeTemplates=state.recurringTemplates.filter(r=>r.active);
+  let html='<div class="hpage-header"><button class="hpage-back" onclick="hideHabitsPage()">← Back</button><div class="hpage-title">🌿 Habit Tracker</div></div>';
+  if(!activeTemplates.length){html+='<div class="empty-state"><div class="icon">🌿</div>No habits set up yet.<br>Add recurring tasks in the Recurring tab!</div>';}
+  activeTemplates.forEach(tmpl=>{
+    const hs=(state.habitStreaks&&state.habitStreaks[tmpl.id])||{streak:0,total:0};
+    const doneDates=new Set(state.tasks.filter(t=>t.recurringId===tmpl.id&&t.done&&t.doneDate).map(t=>t.doneDate));
+    const last28done=days.filter(d=>doneDates.has(d)).length;
+    const dayLabels=['Su','Mo','Tu','We','Th','Fr','Sa'];
+    const labelRow=dayLabels.map(l=>`<div class="hday-label">${l}</div>`).join('');
+    const calCells=days.map(d=>{
+      const isDone=doneDates.has(d);
+      const isToday=d===td;
+      return `<div class="hday${isDone?' done':''}${isToday?' today-cell':''}" title="${d}"></div>`;
+    }).join('');
+    html+=`<div class="habit-track-row"><div class="habit-track-name">${esc(tmpl.text)}</div><div class="habit-track-stats"><span>🔥 Streak: <b>${hs.streak||0}</b></span><span>✅ Total: <b>${hs.total||0}</b></span><span>📅 Last 28 days: <b>${last28done}/28</b></span></div><div class="habit-cal-labels">${labelRow}</div><div class="habit-cal">${calCells}</div></div>`;
+  });
+  pg.innerHTML=html;
+  pg.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function hideHabitsPage(){
+  const pg=document.getElementById('habits-page');
+  if(pg)pg.classList.remove('show');
+  document.body.classList.remove('modal-open');
 }
 function setSyncStatus(status,msg){
   document.getElementById('sync-dot').className='sync-dot '+(status||'');
@@ -664,11 +725,12 @@ function renderTasks(){
   const t=today();
   const vd=viewDate||t;
   updateDateLabel();
+  if(vd!==t){ensureHabitsForDate(vd);}
   const habitTasks=state.tasks.filter(x=>x.isRecurring&&x.scheduledFor===vd);
   const scheduledFuture=state.tasks.filter(x=>x.scheduledFor&&x.scheduledFor>t);
   const regularTasks=state.tasks.filter(x=>!x.isRecurring&&(!x.scheduledFor||x.scheduledFor<=t));
   const habSec=document.getElementById('habits-section');
-  if(habitTasks.length>0){habSec.innerHTML='<div class="list-section-header">🌿 Today\'s Habits</div>'+renderTaskList(applyFilter(habitTasks));}else habSec.innerHTML='';
+  if(habitTasks.length>0){habSec.innerHTML='<div class="list-section-header"><button class="habits-link-btn" onclick="showHabitsPage()">🌿 Habits</button></div>'+renderTaskList(applyFilter(habitTasks));}else habSec.innerHTML='';
   const qSec=document.getElementById('quests-section');
   const rf=applyFilter(regularTasks);
   if(rf.length>0){qSec.innerHTML=(habitTasks.length>0?'<div class="list-section-header">⚔️ Quests</div>':'')+renderTaskList(rf);}
@@ -693,7 +755,7 @@ function renderTaskList(tasks,isScheduled=false){
       <div class="task-meta">
         <span class="diff-badge diff-${t.difficulty}">${t.difficulty.toUpperCase()}</span>
         <span class="xp-reward">+${XP_TABLE[t.difficulty]} XP</span>
-        ${t.isRecurring?`<span class="rec-badge">🔄 ${t.category||'Recurring'}</span>${(state.habitStreaks&&state.habitStreaks[t.recurringId]&&state.habitStreaks[t.recurringId].streak>0)?`<span class="habit-streak">🔥 ${state.habitStreaks[t.recurringId].streak}</span>`:''}`:''}
+        ${t.isRecurring?`<span class="rec-badge">🔄 ${t.category||'Recurring'}</span>${(state.habitStreaks&&state.habitStreaks[t.recurringId]&&state.habitStreaks[t.recurringId].streak>0)?`<span class="habit-streak">🔥 ${state.habitStreaks[t.recurringId].streak}</span>`:''} ${(state.habitStreaks&&state.habitStreaks[t.recurringId]&&(state.habitStreaks[t.recurringId].total||0)>0)?`<span class="habit-total">✅ ${state.habitStreaks[t.recurringId].total}</span>`:''}`:''}
         ${t.isMeal?'<span class="meal-badge">🍽️ Meal</span>':''}
         ${isScheduled&&!t.isMeal?`<span class="sched-badge">📅 ${fmtDate(new Date(t.scheduledFor).getTime())}</span>`:''}
         ${!t.isRecurring&&!isScheduled?`<span class="task-time">${fmtDate(t.createdAt)}</span>`:''}
@@ -820,10 +882,10 @@ function toggleTask(id){
     t.done=true;t.doneDate=today();markActiveToday();
     const xp=XP_TABLE[t.difficulty];addXP(xp);recordHistory(xp);
     state.totalDone++;if(t.difficulty==='epic')state.epicDone++;
-    if(t.recurringId){if(!state.habitStreaks)state.habitStreaks={};const hd=state.habitStreaks[t.recurringId]||{streak:0,lastDone:null};const yd=new Date();yd.setDate(yd.getDate()-1);const ys=yd.toISOString().slice(0,10);hd.streak=(hd.lastDone===ys)?hd.streak+1:1;hd.lastDone=today();state.habitStreaks[t.recurringId]=hd;}
+    if(t.recurringId){if(!state.habitStreaks)state.habitStreaks={};const hd=state.habitStreaks[t.recurringId]||{streak:0,lastDone:null,total:0};const doneDate=t.scheduledFor||today();const _pd=doneDate.split('-');const _pdt=new Date(+_pd[0],+_pd[1]-1,+_pd[2]);_pdt.setDate(_pdt.getDate()-1);const ys=_pdt.getFullYear()+'-'+String(_pdt.getMonth()+1).padStart(2,'0')+'-'+String(_pdt.getDate()).padStart(2,'0');hd.streak=(hd.lastDone===ys)?hd.streak+1:1;hd.lastDone=doneDate;hd.total=(hd.total||0)+1;state.habitStreaks[t.recurringId]=hd;}
     if(todayDone()===state.dailyGoal){state.goalHitCount++;toast('🎯 Daily goal reached!','gold');}
     toast(`✅ +${xp} XP!`);checkAchievements();renderChart();
-  }else{t.done=false;t.doneDate=null;if(t.recurringId&&state.habitStreaks&&state.habitStreaks[t.recurringId]){const hd=state.habitStreaks[t.recurringId];if(hd.lastDone===today()){hd.streak=Math.max(0,hd.streak-1);if(!hd.streak)delete state.habitStreaks[t.recurringId];}}}
+  }else{t.done=false;t.doneDate=null;if(t.recurringId&&state.habitStreaks&&state.habitStreaks[t.recurringId]){const hd=state.habitStreaks[t.recurringId];const doneDate=t.scheduledFor||today();if(hd.lastDone===doneDate){hd.streak=Math.max(0,hd.streak-1);}hd.total=Math.max(0,(hd.total||1)-1);if(!hd.streak&&!hd.total)delete state.habitStreaks[t.recurringId];}}
   gistSave();render();
 }
 function deleteTask(id){state.tasks=state.tasks.filter(t=>t.id!==id);gistSave();render();}
@@ -929,5 +991,6 @@ loadLocal();checkStreak();initDefaults();generateDailyTasks();
 if(gistToken&&gistId){gistLoad().then(()=>{seedMeals();generateDailyTasks();gistSave();render();renderChart();});}
 else{if(gistToken)setSyncStatus('ok','Token saved — click ☁️ to create Gist.');render();renderChart();}
 </script>
+<div id="habits-page"></div>
 </body>
 </html>
