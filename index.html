@@ -922,7 +922,7 @@ document.addEventListener('touchmove',function(e){
   gh.style.display='none';
   const under=document.elementFromPoint(tc.clientX,tc.clientY);
   gh.style.display='';
-  document.querySelectorAll('.task-item').forEach,i=>i.classList.remove('drag-over'));
+  document.querySelectorAll('.task-item').forEach(i=>i.classList.remove('drag-over'));
   const ti=under?.closest('[data-task-id]');
   if(ti&&ti.dataset.taskId!==_tid)ti.classList.add('drag-over');
 },{passive:false});
